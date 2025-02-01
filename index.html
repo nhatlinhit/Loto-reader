@@ -31,6 +31,8 @@
             width: 30%;
             padding: 10px;
             border-left: 2px solid #ddd;
+            height: 400px;
+            overflow-y: scroll;
         }
         .number {
             width: 40px;
@@ -55,6 +57,25 @@
             font-size: 20px;
             padding: 5px;
             font-weight: bold;
+        }
+        .right .history {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+        }
+        
+        .right .history li {
+            list-style: none;
+            padding: 5px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        #first {
+            width: 100px;
+            margin: 20px auto;
+            text-align: center;
+            font-size: 40px;
+            color: orange;
         }
         .button-container {
             text-align: center;
@@ -84,10 +105,13 @@
         <!-- Cột phải: Lịch sử số đọc -->
         <div class="right">
             <h3>Lịch sử</h3>
-            <ul class="history" id="historyList"></ul>
             <div class="button-container">
                 <button id="callNumber">Đọc số</button>
             </div>
+            <div id="first"></div>
+            <ul class="history" id="historyList">
+                
+            </ul>
         </div>
     </div>
 
@@ -118,10 +142,19 @@
 
                 // Cập nhật lịch sử
                 let historyList = document.getElementById("historyList");
-                let listItem = document.createElement("li");
-                listItem.textContent = randomNum;
-                historyList.prepend(listItem);
+                let firstItem = document.getElementById("first");
+                if (firstItem.textContent !== "") {
+                    let listItem = document.createElement("li");
+                    listItem.textContent = firstItem.textContent;
+                    historyList.prepend(listItem);
+                }
+                firstItem.textContent = randomNum;
 
+                // Text-to-Speech
+                let utterance = new SpeechSynthesisUtterance(randomNum.toString());
+                utterance.lang = 'vi-VN';
+                speechSynthesis.speak(utterance);
+                
                 // Vô hiệu hóa nút nếu đã đọc hết số
                 if (calledNumbers.length === 90) {
                     this.disabled = true;
