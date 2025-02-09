@@ -94,6 +94,17 @@
             background: gray;
             cursor: not-allowed;
         }
+
+        .bigBtn {
+            padding: 15px 30px;
+            font-size: 20px;
+            margin-right: 10px;
+        }
+
+        .speedTextBox {
+            padding: 10px;
+            text-align: center;
+        }
         /* Media query for mobile devices */
         @media (max-width: 768px) {
             .container {
@@ -127,9 +138,28 @@
 
         <!-- Cột phải: Lịch sử số đọc -->
         <div class="right">
-            <h3>Lịch sử</h3>
+            <h3>Lịch sử</h3>    
+            <div>
+                <label for="languageSelect">Choose a language:</label>
+                <select id="languageSelect">
+                    <option value="en-EN">English</option>
+                    <option value="es-ES">Spanish</option>
+                    <option value="fr-FR">French</option>
+                    <option value="de-DE">German</option>
+                    <option value="ja-Ja">Japaness</option>
+                </select>
+            </div>
+            <div>
+                <button class="speedBtn" id="decreaseSpeed">-</button>
+                <input class="speedTextBox" type="text" id="speedInput" value="2" size="4">
+                <button class="speedBtn" id="increaseSpeed">+</button>
+            </div>
             <div class="button-container">
-                <button id="callNumber">Đọc số</button>
+                <button class="bigBtn" id="callNumber">Đọc từng số</button>
+                <br/><br/>
+                <button class="bigBtn" id="play">Play</button> 
+                <button class="bigBtn" id="pause">Pause</button> 
+                <!-- <button id="listenNumber" onclick="startListening()">Nghe đọc số</button>s -->
             </div>
             <div id="first"></div>
             <ul class="history" id="historyList">
@@ -139,6 +169,18 @@
     </div>
 
     <script>
+        let intervalId;
+        let selectedLanguage = 'vi-VN';
+        var intervalTime = parseInt(document.getElementById('speedInput').value);
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = this.selectedLanguage;
+        } else {
+            alert('Trình duyệt của bạn không hỗ trợ tính năng nhận diện giọng nói.');
+        }
+       
         // Khởi tạo mảng số từ 1 đến 90
         const numbers = Array.from({ length: 90 }, (_, i) => i + 1);
         let calledNumbers = [];
@@ -153,8 +195,44 @@
             numberGrid.appendChild(div);
         });
 
+        document.getElementById('increaseSpeed').addEventListener('click', function() {
+            intervalTime += 0.5 // Decrease interval time, minimum 100ms
+            document.getElementById('speedInput').value = intervalTime;
+            updateInterval();
+        });
+
+        document.getElementById('decreaseSpeed').addEventListener('click', function() {
+            if (intervalTime > 1) {
+                intervalTime -= 0.5; // Increase interval time
+                document.getElementById('speedInput').value = intervalTime;
+            }
+        });
+
         // Xử lý nút "Đọc số"
         document.getElementById("callNumber").addEventListener("click", function() {
+            getNumber();
+        });
+
+        document.getElementById("pause").addEventListener("click", function() {
+            document.getElementById('play').disabled = false;
+            clearInterval(intervalId);
+        });
+
+        document.getElementById("play").addEventListener("click", function() {
+            let speed = intervalTime*1000;
+            document.getElementById('play').disabled = true;
+            intervalId = setInterval(function() {
+                getNumber();
+            }, speed);  
+        }); 
+
+        document.getElementById('languageSelect').addEventListener('change', function() {
+            selectedLanguage = this.value;
+            console.log("Selected language: " + selectedLanguage);
+            // Perform an action based on the selected language
+        });
+
+        function getNumber() {
             if (calledNumbers.length < 90) {
                 let availableNumbers = numbers.filter(n => !calledNumbers.includes(n));
                 let randomNum = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
@@ -173,9 +251,10 @@
                 }
                 firstItem.textContent = randomNum;
 
+                console.log(selectedLanguage);
                 // Text-to-Speech
                 let utterance = new SpeechSynthesisUtterance(randomNum.toString());
-                utterance.lang = 'vi-VN';
+                utterance.lang = selectedLanguage;
                 speechSynthesis.speak(utterance);
                 
                 // Vô hiệu hóa nút nếu đã đọc hết số
@@ -183,7 +262,46 @@
                     this.disabled = true;
                 }
             }
-        });
+        }
+
+        function startListening() {
+            let historyList = document.getElementById("historyList");
+            
+            let firstItem = document.getElementById("first");
+            let currentNumber = firstItem.textContent;
+            console.log(currentNumber, "currentNumber");
+            firstItem.textContent = "...";
+            
+            recognition.start();
+
+            recognition.onresult = function(event) {
+                const number = parseInt(event.results[0][0].transcript);
+                if (!isNaN(number) && number >= 1 && number <= 90 && calledNumbers.includes(number) === false) {
+                    calledNumbers.push(number);
+                    document.getElementById(`num-${number}`).classList.add("called");
+                    if (currentNumber !== "") {
+                        let listItem = document.createElement("li");
+                        listItem.textContent = currentNumber;
+                        historyList.prepend(listItem);
+                    }
+                    firstItem.textContent = number;
+                    speakNumber(number);
+                } else {
+                    firstItem.textContent = currentNumber;
+                    alert('Please say a number between 1 and 90 and not yet called.');
+                }
+            };
+
+            recognition.onerror = function(event) {
+                alert('Error occurred in recognition: ' + event.error);
+            };
+        }
+
+        function speakNumber(number) {
+            const msg = new SpeechSynthesisUtterance(number.toString());
+            msg.lang = selectedLanguages;
+            window.speechSynthesis.speak(msg);
+        }
     </script>
 
 </body>
